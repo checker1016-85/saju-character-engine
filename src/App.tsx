@@ -14,10 +14,10 @@ export default function App() {
   }, []);
 
   // Simple Hash Router
-  if (currentHash === '#/public') {
-    return <Generator />;
+  if (currentHash === '#/editor') {
+    return <Editor />;
   }
 
-  // Default route is Editor
-  return <Editor />;
+  // Default route is Generator (Public View)
+  return <Generator />;
 }

@@ -1,20 +1,40 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Saju Character Studio
 
-# Run and deploy your AI Studio app
+Discover your destiny's unique character. An AI-powered Saju Myeongni (Four Pillars of Destiny) analysis and character archetype generator.
 
-This contains everything you need to run your app locally.
+## 🌟 Live Web Links (Shareable)
 
-View your app in AI Studio: https://ai.studio/apps/9a7f4591-e74f-4c39-b96a-7e53854b5849
+We provide an independent, read-only "Public Web Engine" view for general users, alongside the main editor block.
 
-## Run Locally
+*   👉 **Public Web Engine (Generator Only)**
+    **URL:** `https://ais-pre-5ouxyd7t4f2gjq6jnnw6e4-432099260399.asia-northeast1.run.app/#/public`
+    *(Share this link with users! They can use the AI prompt generator without modifying any app settings or code.)*
 
-**Prerequisites:**  Node.js
+*   👉 **Editor View (Admin/Dev)**
+    **URL:** `https://ais-pre-5ouxyd7t4f2gjq6jnnw6e4-432099260399.asia-northeast1.run.app/#/editor`
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🚀 Run and deploy your AI Studio app
+
+### Prerequisites
+Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
+
+### Getting Started
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+   *The server will start, typically on `http://localhost:3000` (or `http://localhost:5173`).*
+
+3. **Build for production:**
+   ```bash
+   npm run build
+   ```
+   *The built files will be output to the `dist/` directory, which can be deployed to any static hosting provider.*
