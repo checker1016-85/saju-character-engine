@@ -190,10 +190,10 @@ export function genWebAI(db: any, il: string, g: 'male' | 'female', w: string | 
       t += `【직업 오행/기질】 오행: ${jobCat.oheng} | 십성: ${jobCat.sipsung} | 기질: ${jobCat.gijil}\n`;
       
       // Fallback to legacy job_visual if a direct match exists
-      const fallbackVisual = Object.values(db.job_visual || {}).find((v: any) => jobCat.name.includes(v.name) || v.name.includes(jobCat.category.split('·')[0]));
+      const fallbackVisualEntry = Object.entries(db.job_visual || {}).find(([key, v]: [string, any]) => jobCat.name.includes(key) || key.includes(jobCat.category.split('·')[0]));
       
-      if (fallbackVisual) {
-        t += `【직업 비주얼】\n${(fallbackVisual as any).desc}\n`;
+      if (fallbackVisualEntry) {
+        t += `【직업 비주얼】\n${(fallbackVisualEntry[1] as any).desc}\n`;
       } else {
         t += `【의상 및 스타일링】\n해당 직업(${jobCat.name})의 전문성과 키워드 분위기가 잘 드러나는 현대적인 의상을 캐릭터에 입혀주세요. 캐릭터의 오행 색상을 의상 포인트 컬러로 활용해주세요.\n`;
       }
@@ -332,10 +332,10 @@ export function genSD(db: any, il: string, g: 'male' | 'female', w: string | nul
       t += `【Keywords】 ${jobCat.keywords?.join(', ')}\n`;
       t += `【Job Attributes】 Elements: ${jobCat.oheng} | Stars: ${jobCat.sipsung} | Temperament: ${jobCat.gijil}\n`;
       
-      const fallbackVisual = Object.values(db.job_visual || {}).find((v: any) => jobCat.name.includes(v.name) || v.name.includes(jobCat.category.split('·')[0]));
+      const fallbackVisualEntry = Object.entries(db.job_visual || {}).find(([key, v]: [string, any]) => jobCat.name.includes(key) || key.includes(jobCat.category.split('·')[0]));
       
-      if (fallbackVisual) {
-        t += `【Visual Traits】\n${(fallbackVisual as any).desc}\n`;
+      if (fallbackVisualEntry) {
+        t += `【Visual Traits】\n${(fallbackVisualEntry[1] as any).desc}\n`;
       } else {
         t += `【Outfit & Styling Guidelines】\nPlease dress the character in a modern, professional outfit that reflects the expertise and mood of a ${jobCat.name}. Use the character's elemental color as a vibrant accent.\n`;
       }
