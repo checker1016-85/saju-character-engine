@@ -104,10 +104,11 @@ export function genWebAI(db: any, il: string, g: 'male' | 'female', w: string | 
   const iu = getIljuUnique(db, il);
 
   let t = `■ 반드시 지켜야 할 규칙\n`;
-  t += `1. 메인 명령: 아래 설정을 기반으로 **일본 소년만화 스타일**(나루토, 주술회전 화풍 등 선이 굵고 명암 대비가 강한 스타일)의 캐릭터 일러스트를 그려주세요.\n`;
-  t += `2. 배경: 순수 흰색(#FFFFFF)만.\n`;
-  t += `3. 텍스트 표기: 왼쪽 상단에 "${il}" 텍스트를 작게 표기.\n`;
-  t += `4. 의상 제약: 현대물 기준 의상. 판타지 갑옷·한복·날개·뿔·무기 금지.\n\n`;
+  t += `1. 메인 명령: 아래 설정을 기반으로 **일본 소년만화 스타일**(나루토, 주술회전 화풍 등 선이 굵고 명암 대비가 강한 스타일)의 캐릭터 일러스트를 전신으로 그려주세요.\n`;
+  t += `2. 전신 묘사: 반드시 머리부터 발끝까지 모두 나오는 전신(Full Body) 구도로 그려주세요.\n`;
+  t += `3. 배경: 순수 흰색(#FFFFFF)만.\n`;
+  t += `4. 텍스트 표기: 왼쪽 상단에 "${il}" 텍스트를 작게 표기.\n`;
+  t += `5. 의상 제약: 현대물 기준 의상. 판타지 갑옷·한복·날개·뿔·무기 금지.\n\n`;
 
   t += `■ 기본 정보\n`;
   t += `- 일주: ${il} (${KR_CH[ch]}${KR_JI[ji]}) | 오행: ${oh}(${yy}) | 12운성: ${iu['십이운성']||''} | 일지십성: ${iu['일지십성']||''}\n`;
@@ -247,10 +248,11 @@ export function genSD(db: any, il: string, g: 'male' | 'female', w: string | nul
   const iu = getIljuUnique(db, il);
 
   let t = `■ STRICT RULES (Must Follow)\n`;
-  t += `1. Main Instruction: Please draw a character illustration based on the settings below in **Japanese shonen manga style** (e.g., Naruto, Jujutsu Kaisen - bold lines, strong contrast).\n`;
-  t += `2. Background: Pure white (#FFFFFF) ONLY.\n`;
-  t += `3. Text: Place "${il}" in small text in the top-left corner.\n`;
-  t += `4. Outfit Constraint: Modern contemporary outfits only. NO fantasy armor, traditional garments, wings, horns, or weapons.\n\n`;
+  t += `1. Main Instruction: Please draw a full-body character illustration based on the settings below in **Japanese shonen manga style** (e.g., Naruto, Jujutsu Kaisen - bold lines, strong contrast).\n`;
+  t += `2. Full Body: MUST draw the character in full body (from head to toe).\n`;
+  t += `3. Background: Pure white (#FFFFFF) ONLY.\n`;
+  t += `4. Text: Place "${il}" in small text in the top-left corner.\n`;
+  t += `5. Outfit Constraint: Modern contemporary outfits only. NO fantasy armor, traditional garments, wings, horns, or weapons.\n\n`;
 
   t += `■ Basic Information\n`;
   t += `- Il-ju: ${il} (${KR_CH[ch]}${KR_JI[ji]}) | Elements: ${oh}(${yy}) | 12 Phases: ${iu['십이운성']||''} | Stars: ${iu['일지십성']||''}\n`;

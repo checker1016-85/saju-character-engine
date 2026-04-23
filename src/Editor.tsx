@@ -259,7 +259,7 @@ export default function Editor() {
               <Briefcase className="w-3 h-3" /> 5. 직업 선택 (Select Occupation)
             </h3>
             
-            <div className="grid grid-cols-2 lg:grid-cols-8 gap-2 relative z-20">
+            <div className="grid grid-cols-6 lg:grid-cols-6 gap-2 relative z-20">
               <div className="relative flex">
                 <button
                   key="제외"
@@ -268,13 +268,13 @@ export default function Editor() {
                     setExpandedCategory(null);
                   }}
                   className={cn(
-                    "w-full h-full min-h-[58px] p-2 rounded-lg border transition-all flex flex-col items-center justify-center text-center",
+                    "w-full h-full min-h-[75px] p-2 rounded-lg border transition-all flex flex-col items-center justify-center text-center",
                     selectedJob === "제외" 
                       ? "bg-stone-500 text-white border-stone-500 shadow-md" 
                       : "bg-white/5 text-white/30 border-white/10 hover:border-white/30"
                   )}
                 >
-                  <span className="text-[10px] font-bold leading-tight break-keep">직업 비주얼 설정 제외</span>
+                  <span className="text-[10px] font-bold leading-tight break-keep">비주얼 설정<br/>제외</span>
                 </button>
               </div>
 
@@ -287,15 +287,50 @@ export default function Editor() {
                     <button
                       onClick={() => setExpandedCategory(expandedCategory === group.id ? null : group.id)}
                       className={cn(
-                        "w-full h-full min-h-[58px] p-2 rounded-lg border transition-all flex flex-col items-center justify-center text-center gap-1 relative",
+                        "w-full h-full min-h-[75px] p-2 rounded-lg border transition-all flex flex-col items-center justify-center text-center gap-1 relative",
                         isSelected 
                           ? "bg-orange-500 text-white border-orange-500 shadow-md" 
                           : "bg-white/5 text-white/30 border-white/10 hover:border-white/30"
                       )}
                     >
-                      <span className="text-[10px] font-bold leading-tight flex items-center justify-center gap-1">
-                         {group.name} <ChevronDown className="w-3 h-3 opacity-60" />
-                      </span>
+                      <div className="text-[10px] font-bold leading-tight flex flex-col items-center justify-center gap-0.5">
+                        {(() => {
+                          const parts = group.name.split('·');
+                          if (parts.length <= 1) {
+                            return (
+                              <span className="flex items-center justify-center break-keep">
+                                {group.name} <ChevronDown className="w-3 h-3 opacity-60 ml-0.5" />
+                              </span>
+                            );
+                          }
+                          
+                          let bestSplitIdx = 0;
+                          let minDiff = Infinity;
+                          let currentLen = 0;
+                          const totalLen = group.name.length;
+                          
+                          for (let i = 0; i < parts.length - 1; i++) {
+                            currentLen += parts[i].length + 1;
+                            const diff = Math.abs((totalLen - currentLen) - currentLen);
+                            if (diff < minDiff) {
+                              minDiff = diff;
+                              bestSplitIdx = i;
+                            }
+                          }
+                          
+                          const line1 = parts.slice(0, bestSplitIdx + 1).join('·') + '·';
+                          const line2 = parts.slice(bestSplitIdx + 1).join('·');
+                          
+                          return (
+                            <>
+                              <span className="flex items-center justify-center break-keep">{line1}</span>
+                              <span className="flex items-center justify-center break-keep">
+                                {line2} <ChevronDown className="inline-block w-3 h-3 opacity-60 ml-0.5" />
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
                       {isSelected && (
                         <span className="text-[9px] text-white/90 font-black bg-black/20 px-1.5 py-0.5 rounded break-keep w-full whitespace-normal">
                           {selectedJobObj.name}
