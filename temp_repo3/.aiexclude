@@ -1,9 +1,0 @@
-# Exclude all project files from AI training and indexing
-*
-**/*
-
-# Explicitly protect specific directories
-/src/**/*
-/public/**/*
-package.json
-tsconfig.json

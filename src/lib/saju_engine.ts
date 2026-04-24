@@ -33,31 +33,39 @@ export function checkRelation(a: string, b: string) {
   return { t: '', d: '', pk: '' };
 }
 
-export function getDNA(db: any, ilju: string, gender: 'male' | 'female') {
-  const d = db.dna[ilju];
-  if (!d) return {};
-  const com = d.common || {};
-  const gen = gender === 'male' ? (d.male || {}) : (d.female || {});
-  return { ...com, ...gen };
+export function getDNA(db: any, ilju: string) {
+  return db.dna?.[ilju] || {};
 }
 
 export function getDNACommon(db: any, ilju: string) {
-  return (db.dna[ilju] || {}).common || {};
+  return getDNA(db, ilju).common || {};
 }
 
 export function getDNAGender(db: any, ilju: string, gender: 'male' | 'female') {
-  const d = db.dna[ilju];
-  if (!d) return {};
-  return gender === 'male' ? (d.male || {}) : (d.female || {});
+  return getDNA(db, ilju)[gender] || {};
 }
 
 export function getGenderTraits(db: any, ch: string, gender: 'male' | 'female') {
-  const key = gender === 'male' ? '남' : '녀';
-  return db.gender_traits[`${ch}_${key}`] || {};
+  const traits = db.gender_traits || {};
+  const key = `${ch}_${gender === 'male' ? '남' : '녀'}`;
+  return traits[key] || {};
 }
 
 export function getIljuUnique(db: any, ilju: string) {
-  return db.ilju_unique[ilju] || {};
+  const uniques = db.ilju_unique || {};
+  return uniques[ilju] || {};
+}
+
+export function getWoljuTraits(db: any, wolju: string) {
+  const months = db.month_correction || {};
+  const ji = wolju[1];
+  return months[ji] || {};
+}
+
+export function getAgeCorrection(db: any, age: string) {
+  const sheet = db['시트52_나이대_보정'] || [];
+  if (!Array.isArray(sheet)) return {};
+  return sheet.find((r: any) => r['나이대'] === age || r['연령대'] === age) || {};
 }
 
 export interface JobCategory {
@@ -67,24 +75,43 @@ export interface JobCategory {
   keywords: string[];
 }
 
-export function getJobList(db: any, ilju: string, monthHanja: string): JobCategory[] {
+export function getJobList(db: any, ilju: string, wolju: string): JobCategory[] {
   const result: JobCategory[] = [];
   const seen = new Set<string>();
 
-  // Extract the raw branch character from month, e.g., "인(寅)" -> "寅"
-  const wolji = monthHanja.match(/[가-힣]\((.+)\)/)?.[1] || monthHanja;
+  const iljuSheet = db['시트22_일주_직업매칭'] || db.ilju_to_jobs || [];
+  const woljuSheet = db['시트31_월주_직업매칭'] || db.branch_to_jobs || [];
+  const categories = db['시트40_직업군_100매칭'] || db.job_categories_100 || [];
 
-  const iljuJobIds = (db.ilju_to_jobs && db.ilju_to_jobs[ilju]) || [];
-  const woljiJobIds = (db.branch_to_jobs && db.branch_to_jobs[wolji]) || [];
+  let iljuJobIds: string[] = [];
+  if (Array.isArray(iljuSheet)) {
+    const row = iljuSheet.find((r: any) => r['일주'] === ilju);
+    iljuJobIds = row ? (row['직업코드'] || row['jobs'] || '').split(',').map((s: string) => s.trim()) : [];
+  } else {
+    iljuJobIds = iljuSheet[ilju] || [];
+  }
+
+  let woljuJobIds: string[] = [];
+  if (Array.isArray(woljuSheet)) {
+    const row = woljuSheet.find((r: any) => r['월주'] === wolju || r['월지'] === (wolju ? wolju[1] : ''));
+    woljuJobIds = row ? (row['직업코드'] || row['jobs'] || '').split(',').map((s: string) => s.trim()) : [];
+  } else {
+    woljuJobIds = woljuSheet[wolju] || [];
+  }
   
-  const allIds = new Set([...iljuJobIds, ...woljiJobIds]);
-  const categories = db.job_categories_100 || [];
+  const allIds = new Set([...iljuJobIds, ...woljuJobIds]);
 
   for (const cat of categories) {
-    if (allIds.has(cat.id)) {
-      if (!seen.has(cat.id)) {
-        seen.add(cat.id);
-        result.push(cat);
+    const cid = cat.id || cat['ID'] || cat['코드'];
+    if (allIds.has(cid)) {
+      if (!seen.has(cid)) {
+        seen.add(cid);
+        result.push({
+          id: cid,
+          name: cat.name || cat['직업명'],
+          category: cat.category || cat['카테고리'],
+          keywords: Array.isArray(cat.keywords) ? cat.keywords : (cat.keywords || cat['키워드'] || '').split(',').map((s: string) => s.trim())
+        });
       }
     }
   }
@@ -97,144 +124,148 @@ export function genWebAI(db: any, il: string, g: 'male' | 'female', age: string,
   const oh = OH_MAP[ch], yy = YY_MAP[ch];
   const gkr = g === 'male' ? '남성' : '여성';
 
-  const dna = getDNA(db, il, g);
   const dnaG = getDNAGender(db, il, g);
   const dnaC = getDNACommon(db, il);
   const gt = getGenderTraits(db, ch, g);
   const iu = getIljuUnique(db, il);
 
-  let t = `■ 반드시 지켜야 할 규칙\n`;
-  t += `1. 메인 명령: 아래 설정을 기반으로 **일본 소년만화 스타일**(나루토, 주술회전 화풍 등 선이 굵고 명암 대비가 강한 스타일)의 캐릭터 일러스트를 전신으로 그려주세요.\n`;
-  t += `2. 전신 묘사: 반드시 머리부터 발끝까지 모두 나오는 전신(Full Body) 구도로 그려주세요.\n`;
-  t += `3. 배경: 순수 흰색(#FFFFFF)만.\n`;
-  t += `4. 텍스트 표기: 왼쪽 상단에 "${il}" 텍스트를 작게 표기.\n`;
-  t += `5. 의상 제약: 현대물 기준 의상. 판타지 갑옷·한복·날개·뿔·무기 금지.\n\n`;
+  // Helper to safely get DNA value
+  const getD = (key: string) => (dnaG[key] || dnaC[key] || '').trim();
 
-  t += `■ 기본 정보\n`;
-  t += `- 일주: ${il} (${KR_CH[ch]}${KR_JI[ji]}) | 오행: ${oh}(${yy}) | 12운성: ${iu['십이운성']||''} | 일지십성: ${iu['일지십성']||''}\n`;
-  t += `- 성별: ${gkr} | 연령대: ${age}\n`;
-  if (iu['납음']) t += `- 납음: ${iu['납음']} — ${iu['납음해석']||''}\n`;
+  let t = `■ 반드시 지켜야 할 규칙
+1. 메인 명령: 아래 설정을 기반으로 **주술회전 화풍의 손그림 스타일**(선이 굵고 명암 대비가 강한 스타일)의 캐릭터 일러스트를 전신으로 그려주세요.
+2. 전신 묘사: 반드시 머리부터 발끝까지 모두 나오는 전신(Full Body) 구도로 그려주세요.
+3. 배경: 순수 흰색(#FFFFFF)만.
+4. 텍스트 표기: 왼쪽 상단에 "${il}" 텍스트를 작게 표기.
+5. 의상 제약: 현대물 기준 의상. 판타지 갑옷·한복·날개·뿔·무기 금지.
+6. 오행 컨셉: 오행의 컨셉은 중국이나 일본 스타일을 절대 피해야 하며, 반드시 한국적이거나 차라리 오리지널 한국 현대물 기준이어야 합니다.
+
+■ 기본 정보
+- 일주: ${il} (${KR_CH[ch]}${KR_JI[ji]}) | 오행: ${oh}(${yy}) | 12운성: ${iu['십이운성']||''} | 일지십성: ${iu['일지십성']||''}
+- 성별: ${gkr} | 연령대: ${age}
+- 납음: ${iu['납음']||''} — ${iu['납음해석']||''}\n`;
 
   if (w) {
-    const sj = w.match(/[가-힣]\((.+)\)/)?.[1] || w; // Extract hanja if exists
-    const season = SEASON_MAP[sj] || '';
-    const mood = SEASON_MOOD[sj] || '';
-    const r = checkRelation(ji, sj);
-    t += `- 월지: ${KR_JI[sj]}(${sj}) | 계절: ${season} | 분위기: ${mood}\n`;
-    if (r.t) t += `  → 일지·월지 관계: ${r.d} — ${r.pk}\n`;
+    const wt = getWoljuTraits(db, w);
+    const r = checkRelation(ji, w[1]);
+    t += `- 월지: ${w[1]} | 계절: ${wt['계절'] || SEASON_MAP[w[1]] || ''} | 분위기: ${wt['설명'] || SEASON_MOOD[w[1]] || ''}\n`;
+    if (r.t) t += `- 일지·월지 관계: ${r.d}(${r.pk})\n`;
   }
 
-  t += `\n■ 성격·기질\n`;
-  if (iu['고유성격']) t += `【일주 고유 성격】\n${iu['고유성격']}\n\n`;
-  
-  const personality10 = (gt['성격분기'] || '').trim();
-  const personalityDNA = (dnaG['H1_표정온도'] || '').trim();
-  const personalitySource = personality10.length >= personalityDNA.length ? personality10 : personalityDNA;
-  if (personalitySource) t += `【${gkr} 성격 특징】\n${personalitySource}\n\n`;
-
-  const atmoCommon = (dnaC['H2_분위기'] || '').trim();
-  const atmoGender = (dnaG['H2_분위기'] || '').trim();
-  const atmosphere = atmoCommon.length >= atmoGender.length ? atmoCommon : atmoGender;
-  if (atmosphere) t += `【분위기·존재감】\n${atmosphere}\n\n`;
-
-  const emotion = (dna['H5_감정중력'] || '').trim();
-  if (emotion) t += `【감정의 중력】\n${emotion}\n\n`;
-  if (gt['관계패턴']) t += `【관계 패턴】\n${gt['관계패턴']}\n\n`;
-
-  t += `■ 캐릭터 외형 상세\n`;
-  const bodyDesc = (dnaG['A1_골격'] || dnaC['A1_골격'] || '').trim();
-  const silhouette = (dnaG['A2_체형'] || dnaC['A2_체형'] || '').trim();
-  if (bodyDesc) t += `【체형·골격】\n${bodyDesc}\n`;
-  if (silhouette) t += `【실루엣·자세】\n${silhouette}\n`;
-
-  const face = (dnaG['B1_얼굴형'] || dnaC['B1_얼굴형'] || '').trim();
-  if (face) t += `【얼굴형】\n${face}\n`;
-
-  const eyes = (dnaG['B2_눈'] || dnaC['B2_눈'] || '').trim();
-  if (eyes) t += `【눈·눈빛】\n${eyes}\n`;
-
-  const hiddenEyes = (dna['B3_이면눈매'] || '').trim();
-  if (hiddenEyes) t += `【감정 고조 시 눈빛 변화】\n${hiddenEyes}\n→ 전투/각성이 아닌, 결의·분노·감동 등 감정이 고조될 때의 눈빛 변화로 해석.\n`;
-
-  const brow = (dna['B4_눈썹'] || '').trim();
-  if (brow) t += `【눈썹】\n${brow}\n`;
-
-  const nose = (dna['B5_코'] || '').trim();
-  const mouth = (dna['B6_입'] || '').trim();
-  if (nose) t += `【코】\n${nose}\n`;
-  if (mouth) t += `【입】\n${mouth}\n`;
-
-  const faceShadow = (dna['B7_얼굴음영'] || '').trim();
-  if (faceShadow) t += `【얼굴 음영】\n${faceShadow}\n`;
-
-  const skin = (dnaG['C1_피부톤'] || dnaC['C1_피부톤'] || '').trim();
-  if (skin) t += `【피부톤·질감】\n${skin}\n`;
-
-  const hair = (dnaG['D1_헤어'] || dnaC['D1_헤어'] || '').trim();
-  const hairPhysics = (dna['D2_머리물리'] || '').trim();
-  if (hair) t += `【헤어 스타일】\n${hair}\n`;
-  if (hairPhysics) t += `【머리카락 물리】\n${hairPhysics}\n`;
-
-  if (g === 'male') {
-    const beard = (dnaG['D3_수염'] || dnaC['D3_수염'] || '').trim();
-    if (beard) t += `【수염·체모】\n${beard}\n`;
+  const ageCorr = getAgeCorrection(db, age);
+  if (ageCorr['보정프롬프트'] || ageCorr['설명']) {
+    t += `【연령대 특징】 ${ageCorr['보정프롬프트'] || ageCorr['설명']}\n`;
   }
+
+  t += `\n■ 성격·기질
+【일주 고유 성격】
+${iu['고유성격'] || ''}
+
+【${gkr} 성격 특징】
+${(gt['성격분기'] || getD('H1_표정온도')).trim()}
+
+【분위기·존재감】
+${getD('H2_분위기')}
+
+【감정의 중력】
+${getD('H5_감정중력')}
+
+【관계 패턴】
+${gt['관계패턴'] || ''}
+
+■ 캐릭터 외형 상세
+【체형·골격】
+${getD('A1_골격')}
+
+【실루엣·자세】
+${getD('A2_체형')}
+
+【얼굴형】
+${getD('B1_얼굴형')}
+
+【눈·눈빛】
+${getD('B2_눈')}
+
+【감정 고조 시 눈빛 변화】
+${getD('B3_이면눈매')}
+→ 전투/각성이 아닌, 결의·분노·감동 등 감정이 고조될 때의 눈빛 변화로 해석.
+
+【눈썹】
+${getD('B4_눈썹')}
+
+【코】
+${getD('B5_코')}
+
+【입】
+${getD('B6_입')}
+
+【얼굴 음영】
+${getD('B7_얼굴음영')}
+
+【피부톤·질감】
+${getD('C1_피부톤')}
+
+【헤어 스타일】
+${getD('D1_헤어')}
+
+【머리카락 물리】
+${getD('D2_머리물리')}
+
+【수염·체모】
+${g === 'male' ? getD('D3_수염') : '없음'}
+
+■ 의상·스타일
+【의복·핏】
+${getD('E1_의복핏')}
+
+【상의】
+${getD('E2_상의')}
+
+【하의】
+${getD('E3_하의')}
+
+【신발】
+${getD('E5_신발')}
+`;
 
   if (jobId !== '제외') {
     const categories = db.job_categories_100 || [];
     const jobCat = categories.find((c: any) => c.id === jobId);
-    
     if (jobCat) {
-      t += `\n■ 직업·의상\n`;
-      t += `【직업군】 ${jobCat.category} - ${jobCat.name} (Code: ${jobCat.id})\n`;
-      t += `【관련 키워드】 ${jobCat.keywords?.join(', ')}\n`;
-      t += `【직업 오행/기질】 오행: ${jobCat.oheng} | 십성: ${jobCat.sipsung} | 기질: ${jobCat.gijil}\n`;
-      if (jobCat.teukgyeok) {
-        t += `【특이사항】 ${jobCat.teukgyeok}\n`;
-      }
-      
-      // Fallback to legacy job_visual if a direct match exists
-      const fallbackVisualEntry = Object.entries(db.job_visual || {}).find(([key, v]: [string, any]) => jobCat.name.includes(key) || key.includes(jobCat.category.split('·')[0]));
-      
-      if (fallbackVisualEntry) {
-        t += `【직업 비주얼】\n${(fallbackVisualEntry[1] as any).desc}\n`;
-      } else {
-        t += `【의상 및 스타일링】\n해당 직업(${jobCat.name})의 전문성과 키워드 분위기가 잘 드러나는 현대적인 의상을 캐릭터에 입혀주세요. 캐릭터의 오행 색상을 의상 포인트 컬러로 활용해주세요.\n`;
-      }
-
-      const top = (dnaG['E2_상의'] || dnaC['E2_상의'] || '').trim();
-      if (top) t += `【오행 색감·소재 참고】\n${top}\n`;
+      t += `
+【직업 특성】
+직업군: ${jobCat.category} - ${jobCat.name}
+키워드: ${jobCat.keywords?.join(', ')}
+오행: ${jobCat.oheng} | 십성: ${jobCat.sipsung} | 기질: ${jobCat.gijil}
+${jobCat.teukgyeok ? `특이사항: ${jobCat.teukgyeok}` : ''}
+`;
     }
-  } else {
-    t += `\n■ 의상·스타일\n`;
-    const outfit = (dnaG['E1_의복핏'] || dnaC['E1_의복핏'] || '').trim();
-    const top = (dnaG['E2_상의'] || dnaC['E2_상의'] || '').trim();
-    const bottom = (dnaG['E3_하의'] || dnaC['E3_하의'] || '').trim();
-    const shoes = (dnaG['E5_신발'] || dnaC['E5_신발'] || '').trim();
-    if (outfit) t += `【의복·핏】\n${outfit}\n`;
-    if (top) t += `【상의】\n${top}\n`;
-    if (bottom) t += `【하의】\n${bottom}\n`;
-    if (shoes) t += `【신발】\n${shoes}\n`;
-    if (gt['스타일분기']) t += `【${gkr} 스타일 방향】\n${gt['스타일분기']}\n`;
   }
 
-  const headAcc = (dna['F1_머리악세'] || '').trim();
-  const bodyAcc = (dna['F2_몸악세'] || '').trim();
-  const pattern = (dna['F5_인장문양'] || '').trim();
-  const effectColor = (dna['G2_이펙트컬러'] || '').trim();
-  if (headAcc || bodyAcc || pattern || effectColor || true) {
-     t += `\n■ 오행 장식·디테일\n`;
-     if (headAcc) t += `【머리·얼굴 포인트】\n${headAcc}\n`;
-     if (bodyAcc) t += `【몸·의상 포인트】\n${bodyAcc}\n`;
-     if (pattern) t += `【문양·모티프】\n${pattern}\n`;
-     if (effectColor) t += `【오행 컬러 악센트】\n${effectColor}\n`;
-  }
+  t += `
+【${gkr} 스타일 방향】
+${gt['스타일분기'] || ''}
 
-  t += `\n■ 표정·포즈·연출\n`;
-  const exprTemp = (dnaC['H1_표정온도'] || '').trim();
-  if (exprTemp) t += `【표정 온도】\n${exprTemp}\n`;
-  const gesture = (dnaG['H3_제스처'] || dnaC['H3_제스처'] || '').trim();
-  if (gesture) t += `【시그니처 제스처】\n${gesture}\n`;
+■ 오행 장식·디테일
+【머리·얼굴 포인트】
+${getD('F1_머리악세')}
+
+【몸·의상 포인트】
+${getD('F2_몸악세')}
+
+【문양·모티프】
+${getD('F5_인장문양')}
+
+【오행 컬러 악센트】
+${getD('G2_이펙트컬러')}
+
+■ 표정·포즈·연출
+【표정 온도】
+${dnaC['H1_표정온도'] || ''}
+
+【시그니처 제스처】
+${getD('H3_제스처')}
+`;
 
   return t;
 }
@@ -244,143 +275,148 @@ export function genSD(db: any, il: string, g: 'male' | 'female', age: string, w:
   const oh = OH_MAP[ch], yy = YY_MAP[ch];
   const gkr = g === 'male' ? 'Male' : 'Female';
 
-  const dna = getDNA(db, il, g);
   const dnaG = getDNAGender(db, il, g);
   const dnaC = getDNACommon(db, il);
   const gt = getGenderTraits(db, ch, g);
   const iu = getIljuUnique(db, il);
 
-  let t = `■ STRICT RULES (Must Follow)\n`;
-  t += `1. Main Instruction: Please draw a full-body character illustration based on the settings below in **Japanese shonen manga style** (e.g., Naruto, Jujutsu Kaisen - bold lines, strong contrast).\n`;
-  t += `2. Full Body: MUST draw the character in full body (from head to toe).\n`;
-  t += `3. Background: Pure white (#FFFFFF) ONLY.\n`;
-  t += `4. Text: Place "${il}" in small text in the top-left corner.\n`;
-  t += `5. Outfit Constraint: Modern contemporary outfits only. NO fantasy armor, traditional garments, wings, horns, or weapons.\n\n`;
+  // Helper to safely get DNA value
+  const getD = (key: string) => (dnaG[key] || dnaC[key] || '').trim();
 
-  t += `■ Basic Information\n`;
-  t += `- Il-ju: ${il} (${KR_CH[ch]}${KR_JI[ji]}) | Elements: ${oh}(${yy}) | 12 Phases: ${iu['십이운성']||''} | Stars: ${iu['일지십성']||''}\n`;
-  t += `- Gender: ${gkr} | Age Group: ${age}\n`;
-  if (iu['납음']) t += `- Nabeum (Melody): ${iu['납음']} — ${iu['납음해석']||''}\n`;
+  let t = `■ STRICT RULES (Must Follow)
+1. Main Instruction: Please draw a full-body character illustration based on the settings below in **Jujutsu Kaisen hand-drawn style** (bold lines, strong contrast).
+2. Full Body: MUST draw the character in full body (from head to toe).
+3. Background: Pure white (#FFFFFF) ONLY.
+4. Text: Place "${il}" in small text in the top-left corner.
+5. Outfit Constraint: Modern contemporary outfits only. NO fantasy armor, traditional garments, wings, horns, or weapons.
+6. Concept Constraint: Avoid Chinese or Japanese styles for elemental concepts. Must strictly follow Korean traditional or original Korean contemporary styles.
+
+■ Basic Information
+- Il-ju: ${il} (${KR_CH[ch]}${KR_JI[ji]}) | Elements: ${oh}(${yy}) | 12 Phases: ${iu['십이운성']||''} | Stars: ${iu['일지십성']||''}
+- Gender: ${gkr} | Age Group: ${age}
+- Nabeum (Melody): ${iu['납음']||''} — ${iu['납음해석']||''}\n`;
 
   if (w) {
-    const sj = w.match(/[가-힣]\((.+)\)/)?.[1] || w; // Extract hanja if exists
-    const season = SEASON_MAP[sj] || '';
-    const mood = SEASON_MOOD[sj] || '';
-    const r = checkRelation(ji, sj);
-    t += `- Month (Wol-ji): ${KR_JI[sj]}(${sj}) | Season: ${season} | Mood: ${mood}\n`;
-    if (r.t) t += `  → Relation (Il-ji to Wol-ji): ${r.d} — ${r.pk}\n`;
+    const wt = getWoljuTraits(db, w);
+    const r = checkRelation(ji, w[1]);
+    t += `- Month (Wol-ju): ${w} (${getGanjiHangul(w)}) | Season: ${wt['계절'] || SEASON_MAP[w[1]]} | Mood: ${wt['설명'] || SEASON_MOOD[w[1]]}\n`;
+    if (r.t) t += `- Relation: ${r.d}(${r.pk})\n`;
   }
 
-  t += `\n■ Personality & Temperament\n`;
-  if (iu['고유성격']) t += `【Unique Personality】\n${iu['고유성격']}\n\n`;
-  
-  const personality10 = (gt['성격분기'] || '').trim();
-  const personalityDNA = (dnaG['H1_표정온도'] || '').trim();
-  const personalitySource = personality10.length >= personalityDNA.length ? personality10 : personalityDNA;
-  if (personalitySource) t += `【${gkr} Personality Traits】\n${personalitySource}\n\n`;
-
-  const atmoCommon = (dnaC['H2_분위기'] || '').trim();
-  const atmoGender = (dnaG['H2_분위기'] || '').trim();
-  const atmosphere = atmoCommon.length >= atmoGender.length ? atmoCommon : atmoGender;
-  if (atmosphere) t += `【Atmosphere & Presence】\n${atmosphere}\n\n`;
-
-  const emotion = (dna['H5_감정중력'] || '').trim();
-  if (emotion) t += `【Emotional Gravity】\n${emotion}\n\n`;
-  if (gt['관계패턴']) t += `【Relationship Pattern】\n${gt['관계패턴']}\n\n`;
-
-  t += `■ Character Appearance Details\n`;
-  const bodyDesc = (dnaG['A1_골격'] || dnaC['A1_골격'] || '').trim();
-  const silhouette = (dnaG['A2_체형'] || dnaC['A2_체형'] || '').trim();
-  if (bodyDesc) t += `【Body Type & Skeleton】\n${bodyDesc}\n`;
-  if (silhouette) t += `【Silhouette & Posture】\n${silhouette}\n`;
-
-  const face = (dnaG['B1_얼굴형'] || dnaC['B1_얼굴형'] || '').trim();
-  if (face) t += `【Face Shape】\n${face}\n`;
-
-  const eyes = (dnaG['B2_눈'] || dnaC['B2_눈'] || '').trim();
-  if (eyes) t += `【Eyes & Gaze】\n${eyes}\n`;
-
-  const hiddenEyes = (dna['B3_이면눈매'] || '').trim();
-  if (hiddenEyes) t += `【Gaze During Emotional Peak】\n${hiddenEyes}\n→ Used when emotions (resolve, anger, awe) run high.\n`;
-
-  const brow = (dna['B4_눈썹'] || '').trim();
-  if (brow) t += `【Eyebrows】\n${brow}\n`;
-
-  const nose = (dna['B5_코'] || '').trim();
-  const mouth = (dna['B6_입'] || '').trim();
-  if (nose) t += `【Nose】\n${nose}\n`;
-  if (mouth) t += `【Mouth】\n${mouth}\n`;
-
-  const faceShadow = (dna['B7_얼굴음영'] || '').trim();
-  if (faceShadow) t += `【Facial Shadows】\n${faceShadow}\n`;
-
-  const skin = (dnaG['C1_피부톤'] || dnaC['C1_피부톤'] || '').trim();
-  if (skin) t += `【Skin Tone & Texture】\n${skin}\n`;
-
-  const hair = (dnaG['D1_헤어'] || dnaC['D1_헤어'] || '').trim();
-  const hairPhysics = (dna['D2_머리물리'] || '').trim();
-  if (hair) t += `【Hair Style】\n${hair}\n`;
-  if (hairPhysics) t += `【Hair Physics】\n${hairPhysics}\n`;
-
-  if (g === 'male') {
-    const beard = (dnaG['D3_수염'] || dnaC['D3_수염'] || '').trim();
-    if (beard) t += `【Beard / Facial Hair】\n${beard}\n`;
+  const ageCorr = getAgeCorrection(db, age);
+  if (ageCorr['영어보정'] || ageCorr['description']) {
+    t += `【Age Traits】 ${ageCorr['영어보정'] || ageCorr['description']}\n`;
   }
+
+  t += `\n■ Personality & Temperament
+【Unique Personality】
+${iu['고유성격'] || ''}
+
+【${gkr} Personality】
+${(gt['성격분기'] || getD('H1_표정온도')).trim()}
+
+【Atmosphere & Presence】
+${getD('H2_분위기')}
+
+【Emotional Gravity】
+${getD('H5_감정중력')}
+
+【Relationship Pattern】
+${gt['관계패턴'] || ''}
+
+■ Character Appearance Details
+【Body Type & Skeleton】
+${getD('A1_골격')}
+
+【Silhouette & Posture】
+${getD('A2_체형')}
+
+【Face Shape】
+${getD('B1_얼굴형')}
+
+【Eyes & Gaze】
+${getD('B2_눈')}
+
+【Gaze During Emotional Peak】
+${getD('B3_이면눈매')}
+→ Used when emotions (resolve, anger, awe) run high.
+
+【Eyebrows】
+${getD('B4_눈썹')}
+
+【Nose】
+${getD('B5_코')}
+
+【Mouth】
+${getD('B6_입')}
+
+【Facial Shadows】
+${getD('B7_얼굴음영')}
+
+【Skin Tone & Texture】
+${getD('C1_피부톤')}
+
+【Hair Style】
+${getD('D1_헤어')}
+
+【Hair Physics】
+${getD('D2_머리물리')}
+
+【Beard / Facial Hair】
+${g === 'male' ? getD('D3_수염') : 'None'}
+
+■ Outfit & Style
+【Fit & Silhouette】
+${getD('E1_의복핏')}
+
+【Top】
+${getD('E2_상의')}
+
+【Bottom】
+${getD('E3_하의')}
+
+【Shoes】
+${getD('E5_신발')}
+`;
 
   if (jobId !== '제외') {
     const categories = db.job_categories_100 || [];
     const jobCat = categories.find((c: any) => c.id === jobId);
-    
     if (jobCat) {
-      t += `\n■ Occupation & Outfit\n`;
-      t += `【Job Category】 ${jobCat.category} - ${jobCat.name} (Code: ${jobCat.id})\n`;
-      t += `【Keywords】 ${jobCat.keywords?.join(', ')}\n`;
-      t += `【Job Attributes】 Elements: ${jobCat.oheng} | Stars: ${jobCat.sipsung} | Temperament: ${jobCat.gijil}\n`;
-      if (jobCat.teukgyeok) {
-        t += `【Special Traits】 ${jobCat.teukgyeok}\n`;
-      }
-      
-      const fallbackVisualEntry = Object.entries(db.job_visual || {}).find(([key, v]: [string, any]) => jobCat.name.includes(key) || key.includes(jobCat.category.split('·')[0]));
-      
-      if (fallbackVisualEntry) {
-        t += `【Visual Traits】\n${(fallbackVisualEntry[1] as any).desc}\n`;
-      } else {
-        t += `【Outfit & Styling Guidelines】\nPlease dress the character in a modern, professional outfit that reflects the expertise and mood of a ${jobCat.name}. Use the character's elemental color as a vibrant accent.\n`;
-      }
-
-      const top = (dnaG['E2_상의'] || dnaC['E2_상의'] || '').trim();
-      if (top) t += `【Color & Material Reference】\n${top}\n`;
+      t += `
+【Occupation Traits】
+Category: ${jobCat.category} - ${jobCat.name}
+Keywords: ${jobCat.keywords?.join(', ')}
+Elements: ${jobCat.oheng} | Stars: ${jobCat.sipsung} | Temperament: ${jobCat.gijil}
+${jobCat.teukgyeok ? `Note: ${jobCat.teukgyeok}` : ''}
+`;
     }
-  } else {
-    t += `\n■ Outfit & Styling\n`;
-    const outfit = (dnaG['E1_의복핏'] || dnaC['E1_의복핏'] || '').trim();
-    const top = (dnaG['E2_상의'] || dnaC['E2_상의'] || '').trim();
-    const bottom = (dnaG['E3_하의'] || dnaC['E3_하의'] || '').trim();
-    const shoes = (dnaG['E5_신발'] || dnaC['E5_신발'] || '').trim();
-    if (outfit) t += `【Fit & Style】\n${outfit}\n`;
-    if (top) t += `【Top】\n${top}\n`;
-    if (bottom) t += `【Bottom】\n${bottom}\n`;
-    if (shoes) t += `【Shoes】\n${shoes}\n`;
-    if (gt['스타일분기']) t += `【${gkr} Style Direction】\n${gt['스타일분기']}\n`;
   }
 
-  const headAcc = (dna['F1_머리악세'] || '').trim();
-  const bodyAcc = (dna['F2_몸악세'] || '').trim();
-  const pattern = (dna['F5_인장문양'] || '').trim();
-  const effectColor = (dna['G2_이펙트컬러'] || '').trim();
-  if (headAcc || bodyAcc || pattern || effectColor) {
-     t += `\n■ Elemental Accessories & Details\n`;
-     if (headAcc) t += `【Head / Face Point】\n${headAcc}\n`;
-     if (bodyAcc) t += `【Body / Outfit Point】\n${bodyAcc}\n`;
-     if (pattern) t += `【Motif / Pattern】\n${pattern}\n`;
-     if (effectColor) t += `【Color Accent】\n${effectColor}\n`;
-  }
+  t += `
+【${gkr} Style Direction】
+${gt['스타일분기'] || ''}
 
-  t += `\n■ Expression, Pose, & Direction\n`;
-  const exprTemp = (dnaC['H1_표정온도'] || '').trim();
-  if (exprTemp) t += `【Expression Temp】\n${exprTemp}\n`;
-  const gesture = (dnaG['H3_제스처'] || dnaC['H3_제스처'] || '').trim();
-  if (gesture) t += `【Signature Gesture】\n${gesture}\n`;
+■ Elemental Accessories & Details
+【Head / Face Point】
+${getD('F1_머리악세')}
+
+【Body / Outfit Point】
+${getD('F2_몸악세')}
+
+【Motif / Pattern】
+${getD('F5_인장문양')}
+
+【Color Accent】
+${getD('G2_이펙트컬러')}
+
+■ Expression, Pose, & Direction
+【Expression Temp】
+${dnaC['H1_표정온도'] || ''}
+
+【Signature Gesture】
+${getD('H3_제스처')}
+`;
 
   return t;
 }

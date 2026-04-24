@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, 
@@ -49,14 +49,7 @@ const SIXTY_GANJI = [
 // Correcting potential Hanja typos in the list from user's perspective
 const CORRECT_SIXTY_GANJI = SIXTY_GANJI.map(g => g.replace('미', '未'));
 
-const AGES = ["10대", "20대", "30대", "40대", "50대", "60대", "70대", "80대"];
-
-const MONTHS = [
-  { hanja: "인(寅)", label: "1월" }, { hanja: "묘(卯)", label: "2월" }, { hanja: "진(辰)", label: "3월" },
-  { hanja: "사(巳)", label: "4월" }, { hanja: "오(午)", label: "5월" }, { hanja: "미(未)", label: "6월" },
-  { hanja: "신(申)", label: "7월" }, { hanja: "유(酉)", label: "8월" }, { hanja: "술(戌)", label: "9월" },
-  { hanja: "해(亥)", label: "10월" }, { hanja: "자(子)", label: "11월" }, { hanja: "축(丑)", label: "12월" }
-];
+const AGES = ["7~12세(10대미만)", "13~19세(10대)", "20대", "30대", "40대", "50대", "60대", "70대", "80대"];
 
 const OH_TEXT_COLOR: Record<string, string> = {
   '목': 'text-emerald-500', // 초록
@@ -93,8 +86,8 @@ export default function Editor() {
   const [selectedGanji, setSelectedGanji] = useState<string>("甲子");
   const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('female');
   const [selectedJob, setSelectedJob] = useState<string>("제외");
-  const [selectedAge, setSelectedAge] = useState<string>("10대");
-  const [selectedMonth, setSelectedMonth] = useState<string>("인(寅)");
+  const [selectedAge, setSelectedAge] = useState<string>("7~12세(10대미만)");
+  const [selectedMonth, setSelectedMonth] = useState<string>("甲子");
   const [availableJobs, setAvailableJobs] = useState<JobCategory[]>([]);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   
@@ -149,7 +142,28 @@ export default function Editor() {
   }, [selectedGanji, selectedMonth]);
 
   // 드롭다운 메뉴 (모든 직업군 표시)
-  const filteredJobDropdown = sajuDb.job_dropdown;
+  const filteredJobDropdown = useMemo(() => {
+    const sheet40 = (sajuDb as any)['시트40_직업군_100매칭'];
+    if (Array.isArray(sheet40)) {
+      const groups: Record<string, any> = {};
+      sheet40.forEach((j: any) => {
+        const catName = j['카테고리'] || j.category || '기타';
+        if (!groups[catName]) {
+          groups[catName] = { 
+            id: catName, 
+            name: catName, 
+            jobs: [] 
+          };
+        }
+        groups[catName].jobs.push({
+          code: j['ID'] || j['코드'] || j.id,
+          name: j['직업명'] || j.name
+        });
+      });
+      return Object.values(groups);
+    }
+    return (sajuDb as any).job_dropdown || [];
+  }, []);
 
   // Group jobs by category
   const jobsByCategory = availableJobs.reduce((acc, job) => {
@@ -170,7 +184,7 @@ export default function Editor() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white selection:bg-accent-gold/30 pb-24">
+    <div className="min-h-screen bg-[#0A0A0A] text-white selection:bg-sky-400/30 pb-24">
       <main className="max-w-4xl mx-auto px-6 py-12 space-y-12">
         
         {/* 0. Title */}
@@ -199,7 +213,7 @@ export default function Editor() {
                   className={cn(
                     "py-5 rounded-2xl border-2 text-sm uppercase tracking-widest font-black transition-all",
                     selectedGender === g 
-                      ? "bg-orange-500 text-white border-orange-500 shadow-lg" 
+                      ? "bg-sky-400 text-white border-sky-400 shadow-lg" 
                       : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                   )}
                 >
@@ -214,21 +228,27 @@ export default function Editor() {
             <h3 className="text-xs font-bold text-accent-gold/60 uppercase tracking-widest flex items-center gap-2">
               <Clock className="w-3 h-3" /> 2. 나이대 선택 (Select Age)
             </h3>
-            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-              {AGES.map(age => (
-                <button
-                  key={age}
-                  onClick={() => setSelectedAge(age)}
-                  className={cn(
-                    "py-4 rounded-xl border text-xs font-bold transition-all",
-                    selectedAge === age 
-                      ? "bg-orange-500 text-white border-orange-500 shadow-md" 
-                      : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
-                  )}
-                >
-                  {age}
-                </button>
-              ))}
+            <div className="grid grid-cols-5 md:grid-cols-9 gap-1">
+              {AGES.map(age => {
+                const match = age.match(/(.*)\((.*)\)/);
+                const displayMain = match ? match[2] : age;
+                const displaySub = match ? `(${match[1]})` : null;
+                return (
+                  <button
+                    key={age}
+                    onClick={() => setSelectedAge(age)}
+                    className={cn(
+                      "py-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center min-h-[54px]",
+                      selectedAge === age 
+                        ? "bg-sky-400 text-white border-sky-400 shadow-md" 
+                        : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
+                    )}
+                  >
+                    <span>{displayMain}</span>
+                    {displaySub && <span className="text-[9px] opacity-60 leading-tight mt-0.5 font-normal">{displaySub}</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -245,7 +265,7 @@ export default function Editor() {
                   className={cn(
                     "py-2 rounded-lg border transition-all flex flex-col items-center justify-center min-h-[54px]",
                     selectedGanji === gj 
-                      ? "bg-orange-500 text-white border-orange-500 font-bold z-10 scale-105 shadow-xl" 
+                      ? "bg-sky-400 text-white border-sky-400 font-bold z-10 scale-105 shadow-xl" 
                       : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                   )}
                 >
@@ -256,25 +276,25 @@ export default function Editor() {
             </div>
           </div>
 
-          {/* 4. Wol-ji Selection */}
+          {/* 4. Wol-ju Selection */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold text-accent-gold/60 uppercase tracking-widest flex items-center gap-2">
-              <Moon className="w-3 h-3" /> 4. 월지 선택 (Select Wol-ji)
+              <Moon className="w-3 h-3" /> 4. 월주 선택 (Select Wol-ju / 60 Gan-ji)
             </h3>
-            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-1">
-              {MONTHS.map(m => (
+            <div className="grid grid-cols-5 md:grid-cols-10 gap-1">
+              {CORRECT_SIXTY_GANJI.map(gj => (
                 <button
-                  key={m.label}
-                  onClick={() => setSelectedMonth(m.hanja)}
+                  key={gj}
+                  onClick={() => setSelectedMonth(gj)}
                   className={cn(
-                    "flex flex-col items-center justify-center min-h-[58px] p-2 rounded-lg border transition-all",
-                    selectedMonth === m.hanja
-                      ? "bg-orange-500 text-white border-orange-500 shadow-md"
+                    "py-2 rounded-lg border transition-all flex flex-col items-center justify-center min-h-[54px]",
+                    selectedMonth === gj 
+                      ? "bg-sky-400 text-white border-sky-400 font-bold z-10 scale-105 shadow-xl" 
                       : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                   )}
                 >
-                  <span className="text-[13px] font-bold">{m.hanja}</span>
-                  <span className="text-[10px] opacity-80">{m.label}</span>
+                  <span className="font-serif text-[14px] leading-none mb-1">{gj}</span>
+                  <span className="text-[10px] opacity-80">({getGanjiHangul(gj)})</span>
                 </button>
               ))}
             </div>
@@ -316,7 +336,7 @@ export default function Editor() {
                       className={cn(
                         "w-full h-full min-h-[75px] p-2 rounded-lg border transition-all flex flex-col items-center justify-center text-center gap-1 relative",
                         isSelected 
-                          ? "bg-orange-500 text-white border-orange-500 shadow-md" 
+                          ? "bg-sky-400 text-white border-sky-400 shadow-md" 
                           : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                       )}
                     >
@@ -384,7 +404,7 @@ export default function Editor() {
                               className={cn(
                                 "w-full text-center p-2.5 rounded-lg text-[11px] font-bold transition-all border",
                                 selectedJob === job.code
-                                  ? "bg-orange-500 text-white border-orange-500"
+                                  ? "bg-sky-400 text-white border-sky-400"
                                   : "bg-black/40 text-white/50 border-white/5 hover:bg-white/10 hover:text-white"
                               )}
                             >
@@ -478,7 +498,7 @@ export default function Editor() {
                   onClick={() => setPromptLang('ko')}
                   className={cn(
                     "px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
-                    promptLang === 'ko' ? "bg-orange-500 text-white shadow-lg" : "text-white hover:bg-white/10"
+                    promptLang === 'ko' ? "bg-sky-400 text-white shadow-lg" : "text-white hover:bg-white/10"
                   )}
                 >
                   Korean ver.
@@ -487,7 +507,7 @@ export default function Editor() {
                   onClick={() => handleLangSwitch('en')}
                   className={cn(
                     "px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
-                    promptLang === 'en' ? "bg-orange-500 text-white shadow-lg" : "text-white hover:bg-white/10"
+                    promptLang === 'en' ? "bg-sky-400 text-white shadow-lg" : "text-white hover:bg-white/10"
                   )}
                 >
                   {isTranslating ? 'Translating...' : 'English ver.'}
@@ -498,20 +518,31 @@ export default function Editor() {
                 <div className="p-8 bg-black/80 border border-white/10 rounded-2xl font-mono text-[11px] leading-relaxed text-white/60 min-h-[500px] max-h-[1000px] overflow-y-auto custom-scrollbar not-italic whitespace-pre-wrap">
                   {promptLang === 'en' && isTranslating ? (
                     <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-50 pt-20">
-                      <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-8 h-8 border-4 border-sky-400 border-t-transparent rounded-full animate-spin" />
                       <p>AI가 영문 프롬프트로 번역 중입니다...</p>
                     </div>
                   ) : (
                     renderFormattedPrompt(promptLang === 'ko' ? liveKoPrompt : (translatedEnPrompt || 'Please translate first.'))
                   )}
                 </div>
-                <button 
-                  onClick={handleCopy}
-                  className="absolute top-4 right-4 p-3 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white rounded-xl transition-all shadow-xl"
-                >
-                  {copySuccess ? <CheckCircle2 className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                </button>
               </div>
+
+              <button 
+                onClick={handleCopy}
+                className="w-max mx-auto px-12 py-4 bg-sky-400 hover:bg-sky-500 text-white rounded-2xl transition-all shadow-2xl flex items-center justify-center gap-3 font-black text-lg uppercase tracking-[0.2em]"
+              >
+                {copySuccess ? (
+                  <>
+                    <CheckCircle2 className="w-6 h-6" />
+                    <span>Copied Successfully!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-6 h-6" />
+                    <span>Copy Prompt (프롬프트 복사하기)</span>
+                  </>
+                )}
+              </button>
             </div>
 
             {/* AI Rules Footer */}

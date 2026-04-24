@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Copy, CheckCircle2, Sparkles, ExternalLink } from 'lucide-react';
 import { cn } from './lib/utils';
-import { getJobList, genWebAI } from './lib/saju_engine';
+import { getJobList, genWebAI, JobCategory } from './lib/saju_engine';
 import { translatePromptToEnglish } from './services/geminiService';
 import sajuDb from './lib/saju_db.json';
 
@@ -14,14 +14,17 @@ const SIXTY_GANJI = [
   "甲寅", "乙卯", "丙辰", "丁巳", "戊午", "己未", "庚申", "辛酉", "壬戌", "癸亥"
 ];
 
-const AGES = ["10대", "20대", "30대", "40대", "50대", "60대", "70대", "80대"];
+const AGES = ["7~12세(10대미만)", "13~19세(10대)", "20대", "30대", "40대", "50대", "60대", "70대", "80대"];
 
-const MONTHS = [
-  { hanja: "인(寅)", label: "1월" }, { hanja: "묘(卯)", label: "2월" }, { hanja: "진(辰)", label: "3월" },
-  { hanja: "사(巳)", label: "4월" }, { hanja: "오(午)", label: "5월" }, { hanja: "미(未)", label: "6월" },
-  { hanja: "신(申)", label: "7월" }, { hanja: "유(酉)", label: "8월" }, { hanja: "술(戌)", label: "9월" },
-  { hanja: "해(亥)", label: "10월" }, { hanja: "자(子)", label: "11월" }, { hanja: "축(丑)", label: "12월" }
-];
+const getGanjiHangul = (ganji: string) => {
+  const map: Record<string, string> = {
+    '甲': '갑', '乙': '을', '丙': '병', '丁': '정', '戊': '무', '己': '기', '庚': '경', '辛': '신', '壬': '임', '癸': '계',
+    '子': '자', '丑': '축', '寅': '인', '卯': '묘', '辰': '진', '巳': '사', '午': '오', '未': '미', '申': '신', '酉': '유', '戌': '술', '亥': '해'
+  };
+  return (map[ganji[0]] || '') + (map[ganji[1]] || '');
+};
+
+const CORRECT_SIXTY_GANJI = SIXTY_GANJI.map(g => g.replace('미', '未'));
 
 const renderFormattedPrompt = (text: string) => {
   const parts = text.split(/(■.*|【.*?】)/g);
@@ -41,7 +44,7 @@ export default function Generator() {
   const [selectedGanji, setSelectedGanji] = useState<string>("甲子");
   const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('female');
   const [selectedAge, setSelectedAge] = useState<string>("20대");
-  const [selectedMonth, setSelectedMonth] = useState<string>("인(寅)");
+  const [selectedMonth, setSelectedMonth] = useState<string>("丙寅");
   const [selectedJob, setSelectedJob] = useState<string>("제외");
   const [promptLang, setPromptLang] = useState<'ko' | 'en'>('ko');
   const [copySuccess, setCopySuccess] = useState(false);
@@ -96,19 +99,19 @@ export default function Generator() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-6 pb-24 md:p-12 font-sans selection:bg-orange-500/30">
+    <div className="min-h-screen bg-[#050505] text-white p-6 pb-24 md:p-12 font-sans selection:bg-sky-400/30">
       <div className="max-w-4xl mx-auto space-y-8">
         
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-black tracking-tighter flex items-center gap-2">
-              <Sparkles className="text-orange-500" /> Saju Prompt Generator
+              <Sparkles className="text-sky-400" /> Saju Prompt Generator
             </h1>
             <p className="text-white/40 text-sm mt-2">Simplify your prompt generation instantly.</p>
           </div>
           <button 
             onClick={() => window.location.hash = '#/editor'}
-            className="flex items-center gap-2 text-xs uppercase tracking-widest font-bold text-white hover:text-orange-400 transition-colors bg-white/5 px-4 py-2 rounded-lg hover:bg-white/10"
+            className="flex items-center gap-2 text-xs uppercase tracking-widest font-bold text-white hover:text-sky-300 transition-colors bg-white/5 px-4 py-2 rounded-lg hover:bg-white/10"
           >
             Go to Editor <ExternalLink className="w-3 h-3" />
           </button>
@@ -119,7 +122,7 @@ export default function Generator() {
           <div className="space-y-2 col-span-2 md:col-span-1">
             <label className="text-[10px] text-white/40 uppercase tracking-widest font-bold">일주 (Il-ju)</label>
             <select
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-500"
+              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-sky-400"
               value={selectedGanji}
               onChange={(e) => setSelectedGanji(e.target.value)}
             >
@@ -129,18 +132,18 @@ export default function Generator() {
           <div className="space-y-2">
             <label className="text-[10px] text-white/40 uppercase tracking-widest font-bold">성별 (Gender)</label>
             <select
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-500"
+              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-sky-400"
               value={selectedGender}
               onChange={(e) => setSelectedGender(e.target.value as any)}
             >
-              <option value="male">남성</option>
               <option value="female">여성</option>
+              <option value="male">남성</option>
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] text-white/40 uppercase tracking-widest font-bold">연령대 (Age)</label>
             <select
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-500"
+              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-sky-400"
               value={selectedAge}
               onChange={(e) => setSelectedAge(e.target.value)}
             >
@@ -148,26 +151,35 @@ export default function Generator() {
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-widest font-bold">월지 (Month)</label>
+            <label className="text-[10px] text-white/40 uppercase tracking-widest font-bold">월주 (Wol-ju / 60 Gan-ji)</label>
             <select
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-500"
+              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-sky-400"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             >
-              <option value="제외">선택 안함</option>
-              {MONTHS.map((m) => <option key={m.hanja} value={m.hanja}>{m.label} {m.hanja}</option>)}
+              {CORRECT_SIXTY_GANJI.map((g) => <option key={g} value={g}>{g} ({getGanjiHangul(g)})</option>)}
             </select>
           </div>
           <div className="space-y-2 col-span-2 md:col-span-1">
             <label className="text-[10px] text-white/40 uppercase tracking-widest font-bold">직업군 (Job)</label>
             <select
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-500"
+              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-sky-400"
               value={selectedJob}
               onChange={(e) => setSelectedJob(e.target.value)}
             >
               <option value="제외">선택 안함</option>
-              {availableJobs.map((j) => (
-                <option key={j.id} value={j.id}>{j.name}</option>
+              {Object.entries(
+                (availableJobs as JobCategory[]).reduce((acc: Record<string, JobCategory[]>, job: JobCategory) => {
+                  if (!acc[job.category]) acc[job.category] = [];
+                  acc[job.category].push(job);
+                  return acc;
+                }, {} as Record<string, JobCategory[]>)
+              ).map(([category, jobs]) => (
+                <optgroup key={category} label={category}>
+                  {jobs.map((j: JobCategory) => (
+                    <option key={j.id} value={j.id}>{j.name}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
@@ -180,7 +192,7 @@ export default function Generator() {
               onClick={() => setPromptLang('ko')}
               className={cn(
                 "flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all rounded-xl",
-                promptLang === 'ko' ? "bg-orange-500 text-white shadow-lg" : "text-white bg-white/5 hover:bg-white/10"
+                promptLang === 'ko' ? "bg-sky-400 text-white shadow-lg" : "text-white bg-white/5 hover:bg-white/10"
               )}
             >
               Korean ver.
@@ -189,7 +201,7 @@ export default function Generator() {
               onClick={() => handleLangSwitch('en')}
               className={cn(
                 "flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all rounded-xl ml-2",
-                promptLang === 'en' ? "bg-orange-500 text-white shadow-lg" : "text-white bg-white/5 hover:bg-white/10"
+                promptLang === 'en' ? "bg-sky-400 text-white shadow-lg" : "text-white bg-white/5 hover:bg-white/10"
               )}
             >
               {isTranslating ? 'Translating...' : 'English ver.'}
@@ -200,7 +212,7 @@ export default function Generator() {
             <div className="p-8 font-mono text-[11px] leading-relaxed text-white/60 min-h-[400px] h-[60vh] overflow-y-auto custom-scrollbar not-italic whitespace-pre-wrap">
               {promptLang === 'en' && isTranslating ? (
                 <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-50 pt-20">
-                  <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-sky-400 border-t-transparent rounded-full animate-spin" />
                   <p>AI가 영문 프롬프트로 번역 중입니다...</p>
                 </div>
               ) : (
@@ -209,7 +221,7 @@ export default function Generator() {
             </div>
             <button 
               onClick={handleCopy}
-              className="absolute bottom-6 right-6 flex items-center gap-2 px-6 py-4 bg-orange-500 hover:bg-orange-400 text-white rounded-2xl font-bold uppercase tracking-widest text-xs transition-all shadow-[0_0_40px_rgba(249,115,22,0.3)] hover:shadow-[0_0_60px_rgba(249,115,22,0.5)] hover:-translate-y-1"
+              className="absolute bottom-6 right-6 flex items-center gap-2 px-3 py-2 bg-sky-400 hover:bg-sky-300 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] transition-all shadow-[0_0_40px_rgba(56,189,248,0.2)] hover:shadow-[0_0_60px_rgba(56,189,248,0.4)] hover:-translate-y-1"
             >
               {copySuccess ? <><CheckCircle2 className="w-5 h-5" /> Copied!</> : <><Copy className="w-5 h-5" /> Copy Prompt</>}
             </button>

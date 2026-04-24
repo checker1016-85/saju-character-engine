@@ -3,13 +3,18 @@ const xlsx = require('xlsx');
 const path = require('path');
 
 // 설정 부분 (사용자가 업로드할 엑셀 파일명)
-const EXCEL_FILE = path.join(__dirname, 'saju_db.xlsx');
+const EXCEL_FILES = [
+  path.join(__dirname, '사주명리_완전정리_DB.xlsx'),
+  path.join(__dirname, 'saju_db.xlsx')
+];
 const JSON_FILE = path.join(__dirname, 'src', 'lib', 'saju_db.json');
 
 function convertExcelToJson() {
-  if (!fs.existsSync(EXCEL_FILE)) {
-    console.error(`❌ 에러: ${EXCEL_FILE} 파일을 찾을 수 없습니다.`);
-    console.error(`GitHub에 saju_db.xlsx 파일을 먼저 업로드해주세요!`);
+  const EXCEL_FILE = EXCEL_FILES.find(f => fs.existsSync(f));
+
+  if (!EXCEL_FILE) {
+    console.error(`❌ 에러: 엑셀 파일을 찾을 수 없습니다.`);
+    console.error(`'사주명리_완전정리_DB.xlsx' 또는 'saju_db.xlsx' 파일을 업로드해주세요!`);
     return;
   }
 
