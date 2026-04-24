@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Copy, CheckCircle2, Sparkles, ExternalLink } from 'lucide-react';
 import { cn } from './lib/utils';
-import { getJobList, genWebAI, genSD } from './lib/saju_engine';
+import { getJobList, genWebAI } from './lib/saju_engine';
+import { translatePromptToEnglish } from './services/geminiService';
 import sajuDb from './lib/saju_db.json';
 
 const SIXTY_GANJI = [
@@ -44,11 +45,14 @@ export default function Generator() {
   const [selectedJob, setSelectedJob] = useState<string>("제외");
   const [promptLang, setPromptLang] = useState<'ko' | 'en'>('ko');
   const [copySuccess, setCopySuccess] = useState(false);
+  
+  const [translatedEnPrompt, setTranslatedEnPrompt] = useState<string>('');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [lastTranslatedKo, setLastTranslatedKo] = useState<string>('');
 
   const availableJobs = useMemo(() => getJobList(sajuDb, selectedGanji, selectedMonth), [selectedGanji, selectedMonth]);
 
   useEffect(() => {
-    // If the currently selected job is not "제외" and is no longer in the available jobs, reset it.
     if (selectedJob !== '제외' && !availableJobs.find(j => j.id === selectedJob)) {
       setSelectedJob('제외');
     }
@@ -58,12 +62,34 @@ export default function Generator() {
     return genWebAI(sajuDb, selectedGanji, selectedGender, selectedAge, selectedMonth === '제외' ? null : selectedMonth, selectedJob);
   }, [selectedGanji, selectedGender, selectedAge, selectedMonth, selectedJob]);
 
-  const liveEnPrompt = useMemo(() => {
-    return genSD(sajuDb, selectedGanji, selectedGender, selectedAge, selectedMonth === '제외' ? null : selectedMonth, selectedJob);
-  }, [selectedGanji, selectedGender, selectedAge, selectedMonth, selectedJob]);
+  const handleLangSwitch = async (lang: 'ko' | 'en') => {
+    setPromptLang(lang);
+    if (lang === 'en' && lastTranslatedKo !== liveKoPrompt) {
+      setIsTranslating(true);
+      try {
+        const enText = await translatePromptToEnglish(liveKoPrompt);
+        setTranslatedEnPrompt(enText);
+        setLastTranslatedKo(liveKoPrompt);
+      } catch (e) {
+        console.error(e);
+        setTranslatedEnPrompt("Failed to translate prompt. Please try again.");
+      } finally {
+        setIsTranslating(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (promptLang === 'en' && lastTranslatedKo !== liveKoPrompt) {
+      const timer = setTimeout(() => {
+        handleLangSwitch('en');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [liveKoPrompt, promptLang, lastTranslatedKo]);
 
   const handleCopy = () => {
-    const textToCopy = promptLang === 'ko' ? liveKoPrompt : liveEnPrompt;
+    const textToCopy = promptLang === 'ko' ? liveKoPrompt : (translatedEnPrompt || 'No translation available.');
     navigator.clipboard.writeText(textToCopy);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2000);
@@ -160,19 +186,26 @@ export default function Generator() {
               Korean ver.
             </button>
             <button 
-              onClick={() => setPromptLang('en')}
+              onClick={() => handleLangSwitch('en')}
               className={cn(
                 "flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all rounded-xl ml-2",
                 promptLang === 'en' ? "bg-orange-500 text-white shadow-lg" : "text-white/30 hover:text-white/60"
               )}
             >
-              English ver.
+              {isTranslating ? 'Translating...' : 'English ver.'}
             </button>
           </div>
           
           <div className="relative group">
             <div className="p-8 font-mono text-[11px] leading-relaxed text-white/60 min-h-[400px] h-[60vh] overflow-y-auto custom-scrollbar not-italic whitespace-pre-wrap">
-              {renderFormattedPrompt(promptLang === 'ko' ? liveKoPrompt : liveEnPrompt)}
+              {promptLang === 'en' && isTranslating ? (
+                <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-50 pt-20">
+                  <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <p>AI가 영문 프롬프트로 번역 중입니다...</p>
+                </div>
+              ) : (
+                renderFormattedPrompt(promptLang === 'ko' ? liveKoPrompt : (translatedEnPrompt || 'Please translate first.'))
+              )}
             </div>
             <button 
               onClick={handleCopy}

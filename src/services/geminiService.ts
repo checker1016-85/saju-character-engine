@@ -167,6 +167,24 @@ export async function analyzeDestiny(
   }
 }
 
+export async function translatePromptToEnglish(koreanPrompt: string): Promise<string> {
+  const prompt = `Translate the following AI illustration generation prompt from Korean to English. Ensure you accurately translate all specific character traits, clothing styles, and moods. Keep the format, structure, and line breaks identical to the original. Make the English phrasing natural and well-optimized for AI image generators (e.g., Midjourney, DALL-E, Stable Diffusion).
+
+[Korean Prompt]
+${koreanPrompt}`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
+    return response.text?.trim() || 'Failed to translate prompt.';
+  } catch (e) {
+    console.error("Translation error:", e);
+    throw new Error('Failed to translate prompt to English.');
+  }
+}
+
 export async function generateCharacterImage(prompt: string): Promise<string> {
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',

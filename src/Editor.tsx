@@ -19,7 +19,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { CharacterResult } from './types';
-import { analyzeDestiny } from './services/geminiService';
+import { analyzeDestiny, translatePromptToEnglish } from './services/geminiService';
 import { cn } from './lib/utils';
 import { 
   getGanjiHangul, 
@@ -101,6 +101,10 @@ export default function Editor() {
   const [promptLang, setPromptLang] = useState<'ko' | 'en'>('ko');
   const [copySuccess, setCopySuccess] = useState(false);
 
+  const [translatedEnPrompt, setTranslatedEnPrompt] = useState<string>('');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [lastTranslatedKo, setLastTranslatedKo] = useState<string>('');
+
   // Derive Saju info reactively
   const currentIu = getIljuUnique(sajuDb, selectedGanji);
   const ch = selectedGanji[0];
@@ -110,7 +114,32 @@ export default function Editor() {
 
   // Compute live prompts and data based on local DB logic
   const liveKoPrompt = genWebAI(sajuDb, selectedGanji, selectedGender, selectedAge, selectedMonth === '제외' ? null : selectedMonth, selectedJob);
-  const liveEnPrompt = genSD(sajuDb, selectedGanji, selectedGender, selectedAge, selectedMonth === '제외' ? null : selectedMonth, selectedJob);
+
+  const handleLangSwitch = async (lang: 'ko' | 'en') => {
+    setPromptLang(lang);
+    if (lang === 'en' && lastTranslatedKo !== liveKoPrompt) {
+      setIsTranslating(true);
+      try {
+        const enText = await translatePromptToEnglish(liveKoPrompt);
+        setTranslatedEnPrompt(enText);
+        setLastTranslatedKo(liveKoPrompt);
+      } catch (e) {
+        console.error(e);
+        setTranslatedEnPrompt("Failed to translate prompt. Please try again.");
+      } finally {
+        setIsTranslating(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (promptLang === 'en' && lastTranslatedKo !== liveKoPrompt) {
+      const timer = setTimeout(() => {
+        handleLangSwitch('en');
+      }, 500); // debounce by 500ms
+      return () => clearTimeout(timer);
+    }
+  }, [liveKoPrompt, promptLang, lastTranslatedKo]);
 
   useEffect(() => {
     const jobs = getJobList(sajuDb, selectedGanji, selectedMonth);
@@ -134,7 +163,7 @@ export default function Editor() {
   const categories = Object.keys(jobsByCategory);
 
   const handleCopy = () => {
-    const text = promptLang === 'ko' ? liveKoPrompt : liveEnPrompt;
+    const text = promptLang === 'ko' ? liveKoPrompt : translatedEnPrompt || 'No translation available.';
     navigator.clipboard.writeText(text);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2000);
@@ -455,19 +484,26 @@ export default function Editor() {
                   Korean ver.
                 </button>
                 <button 
-                  onClick={() => setPromptLang('en')}
+                  onClick={() => handleLangSwitch('en')}
                   className={cn(
                     "px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                     promptLang === 'en' ? "bg-orange-500 text-white shadow-lg" : "text-white/30 hover:text-white/60"
                   )}
                 >
-                  English ver.
+                  {isTranslating ? 'Translating...' : 'English ver.'}
                 </button>
               </div>
 
               <div className="relative group">
                 <div className="p-8 bg-black/80 border border-white/10 rounded-2xl font-mono text-[11px] leading-relaxed text-white/60 min-h-[500px] max-h-[1000px] overflow-y-auto custom-scrollbar not-italic whitespace-pre-wrap">
-                  {renderFormattedPrompt(promptLang === 'ko' ? liveKoPrompt : liveEnPrompt)}
+                  {promptLang === 'en' && isTranslating ? (
+                    <div className="flex flex-col items-center justify-center h-full space-y-4 opacity-50 pt-20">
+                      <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      <p>AI가 영문 프롬프트로 번역 중입니다...</p>
+                    </div>
+                  ) : (
+                    renderFormattedPrompt(promptLang === 'ko' ? liveKoPrompt : (translatedEnPrompt || 'Please translate first.'))
+                  )}
                 </div>
                 <button 
                   onClick={handleCopy}
