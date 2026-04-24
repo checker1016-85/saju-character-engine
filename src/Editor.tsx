@@ -116,19 +116,11 @@ export default function Editor() {
     const jobs = getJobList(sajuDb, selectedGanji, selectedMonth);
     setAvailableJobs(jobs);
     
-    // 선택된 직업이 새로운 추천 목록에 없으면 '제외'로 초기화하여 정합성 유지
-    if (selectedJob !== "제외" && !jobs.some(j => j.id === selectedJob)) {
-      setSelectedJob("제외");
-    }
+    // 선택된 직업은 추천 목록과 무관하게 유지되도록 변경 (정합성 제한 제거)
   }, [selectedGanji, selectedMonth]);
 
-  // 필터링된 드롭다운 메뉴 (추천직업군 목록에 있는 직업만 표시)
-  const filteredJobDropdown = sajuDb.job_dropdown.map(group => {
-    const filteredJobs = group.jobs.filter(job => 
-      availableJobs.some(aj => aj.id === job.code)
-    );
-    return { ...group, jobs: filteredJobs };
-  }).filter(group => group.jobs.length > 0);
+  // 드롭다운 메뉴 (모든 직업군 표시)
+  const filteredJobDropdown = sajuDb.job_dropdown;
 
   // Group jobs by category
   const jobsByCategory = availableJobs.reduce((acc, job) => {
