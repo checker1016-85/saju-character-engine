@@ -80,12 +80,12 @@ export default function Generator() {
             </h1>
             <p className="text-white/40 text-sm mt-2">Simplify your prompt generation instantly.</p>
           </div>
-          <a 
-            href="#/editor" 
+          <button 
+            onClick={() => window.location.hash = '#/editor'}
             className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold text-white/30 hover:text-orange-400 transition-colors"
           >
             Go to Editor <ExternalLink className="w-3 h-3" />
-          </a>
+          </button>
         </div>
 
         {/* Controls */}
