@@ -109,14 +109,26 @@ export default function Editor() {
   const sj = selectedMonth.match(/[가-힣]\((.+)\)/)?.[1] || selectedMonth;
 
   // Compute live prompts and data based on local DB logic
-  const liveKoPrompt = genWebAI(sajuDb, selectedGanji, selectedGender, selectedMonth === '없음' ? null : selectedMonth, selectedJob);
-  const liveEnPrompt = genSD(sajuDb, selectedGanji, selectedGender, selectedMonth === '없음' ? null : selectedMonth, selectedJob);
+  const liveKoPrompt = genWebAI(sajuDb, selectedGanji, selectedGender, selectedAge, selectedMonth === '제외' ? null : selectedMonth, selectedJob);
+  const liveEnPrompt = genSD(sajuDb, selectedGanji, selectedGender, selectedAge, selectedMonth === '제외' ? null : selectedMonth, selectedJob);
 
   useEffect(() => {
     const jobs = getJobList(sajuDb, selectedGanji, selectedMonth);
     setAvailableJobs(jobs);
-    // 선택된 직업이 추천 목록에 없어도 그대로 유지하도록 변경
+    
+    // 선택된 직업이 새로운 추천 목록에 없으면 '제외'로 초기화하여 정합성 유지
+    if (selectedJob !== "제외" && !jobs.some(j => j.id === selectedJob)) {
+      setSelectedJob("제외");
+    }
   }, [selectedGanji, selectedMonth]);
+
+  // 필터링된 드롭다운 메뉴 (추천직업군 목록에 있는 직업만 표시)
+  const filteredJobDropdown = sajuDb.job_dropdown.map(group => {
+    const filteredJobs = group.jobs.filter(job => 
+      availableJobs.some(aj => aj.id === job.code)
+    );
+    return { ...group, jobs: filteredJobs };
+  }).filter(group => group.jobs.length > 0);
 
   // Group jobs by category
   const jobsByCategory = availableJobs.reduce((acc, job) => {
@@ -142,12 +154,6 @@ export default function Editor() {
         
         {/* 0. Title */}
         <div className="text-center py-8 relative">
-          <a 
-            href="#/public" 
-            className="absolute top-8 right-0 text-[10px] font-bold text-white/40 hover:text-orange-400 uppercase tracking-widest border border-white/10 px-4 py-2 rounded-xl transition-all"
-          >
-            Switch to Simple Generator
-          </a>
           <motion.h1 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -278,7 +284,7 @@ export default function Editor() {
                 </button>
               </div>
 
-              {sajuDb.job_dropdown.map((group) => {
+              {filteredJobDropdown.map((group) => {
                 const selectedJobObj = group.jobs.find(j => j.code === selectedJob);
                 const isSelected = !!selectedJobObj;
 

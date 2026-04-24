@@ -92,7 +92,7 @@ export function getJobList(db: any, ilju: string, monthHanja: string): JobCatego
   return result;
 }
 
-export function genWebAI(db: any, il: string, g: 'male' | 'female', w: string | null, jobId: string) {
+export function genWebAI(db: any, il: string, g: 'male' | 'female', age: string, w: string | null, jobId: string) {
   const ch = il[0], ji = il[1];
   const oh = OH_MAP[ch], yy = YY_MAP[ch];
   const gkr = g === 'male' ? '남성' : '여성';
@@ -112,7 +112,7 @@ export function genWebAI(db: any, il: string, g: 'male' | 'female', w: string | 
 
   t += `■ 기본 정보\n`;
   t += `- 일주: ${il} (${KR_CH[ch]}${KR_JI[ji]}) | 오행: ${oh}(${yy}) | 12운성: ${iu['십이운성']||''} | 일지십성: ${iu['일지십성']||''}\n`;
-  t += `- 성별: ${gkr}\n`;
+  t += `- 성별: ${gkr} | 연령대: ${age}\n`;
   if (iu['납음']) t += `- 납음: ${iu['납음']} — ${iu['납음해석']||''}\n`;
 
   if (w) {
@@ -186,9 +186,12 @@ export function genWebAI(db: any, il: string, g: 'male' | 'female', w: string | 
     
     if (jobCat) {
       t += `\n■ 직업·의상\n`;
-      t += `【직업군】 ${jobCat.category} - ${jobCat.name}\n`;
+      t += `【직업군】 ${jobCat.category} - ${jobCat.name} (Code: ${jobCat.id})\n`;
       t += `【관련 키워드】 ${jobCat.keywords?.join(', ')}\n`;
       t += `【직업 오행/기질】 오행: ${jobCat.oheng} | 십성: ${jobCat.sipsung} | 기질: ${jobCat.gijil}\n`;
+      if (jobCat.teukgyeok) {
+        t += `【특이사항】 ${jobCat.teukgyeok}\n`;
+      }
       
       // Fallback to legacy job_visual if a direct match exists
       const fallbackVisualEntry = Object.entries(db.job_visual || {}).find(([key, v]: [string, any]) => jobCat.name.includes(key) || key.includes(jobCat.category.split('·')[0]));
@@ -236,7 +239,7 @@ export function genWebAI(db: any, il: string, g: 'male' | 'female', w: string | 
   return t;
 }
 
-export function genSD(db: any, il: string, g: 'male' | 'female', w: string | null, jobId: string) {
+export function genSD(db: any, il: string, g: 'male' | 'female', age: string, w: string | null, jobId: string) {
   const ch = il[0], ji = il[1];
   const oh = OH_MAP[ch], yy = YY_MAP[ch];
   const gkr = g === 'male' ? 'Male' : 'Female';
@@ -256,7 +259,7 @@ export function genSD(db: any, il: string, g: 'male' | 'female', w: string | nul
 
   t += `■ Basic Information\n`;
   t += `- Il-ju: ${il} (${KR_CH[ch]}${KR_JI[ji]}) | Elements: ${oh}(${yy}) | 12 Phases: ${iu['십이운성']||''} | Stars: ${iu['일지십성']||''}\n`;
-  t += `- Gender: ${gkr}\n`;
+  t += `- Gender: ${gkr} | Age Group: ${age}\n`;
   if (iu['납음']) t += `- Nabeum (Melody): ${iu['납음']} — ${iu['납음해석']||''}\n`;
 
   if (w) {
@@ -330,9 +333,12 @@ export function genSD(db: any, il: string, g: 'male' | 'female', w: string | nul
     
     if (jobCat) {
       t += `\n■ Occupation & Outfit\n`;
-      t += `【Job Category】 ${jobCat.category} - ${jobCat.name}\n`;
+      t += `【Job Category】 ${jobCat.category} - ${jobCat.name} (Code: ${jobCat.id})\n`;
       t += `【Keywords】 ${jobCat.keywords?.join(', ')}\n`;
       t += `【Job Attributes】 Elements: ${jobCat.oheng} | Stars: ${jobCat.sipsung} | Temperament: ${jobCat.gijil}\n`;
+      if (jobCat.teukgyeok) {
+        t += `【Special Traits】 ${jobCat.teukgyeok}\n`;
+      }
       
       const fallbackVisualEntry = Object.entries(db.job_visual || {}).find(([key, v]: [string, any]) => jobCat.name.includes(key) || key.includes(jobCat.category.split('·')[0]));
       

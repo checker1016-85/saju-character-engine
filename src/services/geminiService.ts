@@ -57,8 +57,8 @@ export async function analyzeDestiny(
   const sj = month.match(/[가-힣]\((.+)\)/)?.[1] || month;
 
   // 2. Build direct prompts from repo logic
-  const webPrompt = genWebAI(sajuDb, ilju, gender, month === '없음' ? null : month, job);
-  const sdPrompt = genSD(sajuDb, ilju, gender, month === '없음' ? null : month, job);
+  const webPrompt = genWebAI(sajuDb, ilju, gender, age, month === '없음' ? null : month, job);
+  const sdPrompt = genSD(sajuDb, ilju, gender, age, month === '없음' ? null : month, job);
 
   // 3. Use Gemini to create a polished narrative and archetype
   const prompt = `

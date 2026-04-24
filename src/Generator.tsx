@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Copy, CheckCircle2, Sparkles, ExternalLink } from 'lucide-react';
 import { cn } from './lib/utils';
 import { getJobList, genWebAI, genSD } from './lib/saju_engine';
@@ -47,13 +47,20 @@ export default function Generator() {
 
   const availableJobs = useMemo(() => getJobList(sajuDb, selectedGanji, selectedMonth), [selectedGanji, selectedMonth]);
 
+  useEffect(() => {
+    // If the currently selected job is not "제외" and is no longer in the available jobs, reset it.
+    if (selectedJob !== '제외' && !availableJobs.find(j => j.id === selectedJob)) {
+      setSelectedJob('제외');
+    }
+  }, [availableJobs, selectedJob]);
+
   const liveKoPrompt = useMemo(() => {
-    return genWebAI(sajuDb, selectedGanji, selectedGender, selectedMonth, selectedJob);
-  }, [selectedGanji, selectedGender, selectedMonth, selectedJob]);
+    return genWebAI(sajuDb, selectedGanji, selectedGender, selectedAge, selectedMonth === '제외' ? null : selectedMonth, selectedJob);
+  }, [selectedGanji, selectedGender, selectedAge, selectedMonth, selectedJob]);
 
   const liveEnPrompt = useMemo(() => {
-    return genSD(sajuDb, selectedGanji, selectedGender, selectedMonth, selectedJob);
-  }, [selectedGanji, selectedGender, selectedMonth, selectedJob]);
+    return genSD(sajuDb, selectedGanji, selectedGender, selectedAge, selectedMonth === '제외' ? null : selectedMonth, selectedJob);
+  }, [selectedGanji, selectedGender, selectedAge, selectedMonth, selectedJob]);
 
   const handleCopy = () => {
     const textToCopy = promptLang === 'ko' ? liveKoPrompt : liveEnPrompt;

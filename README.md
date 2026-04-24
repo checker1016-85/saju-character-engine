@@ -7,11 +7,11 @@ Discover your destiny's unique character. An AI-powered Saju Myeongni (Four Pill
 We provide an independent, read-only "Public Web Engine" view for general users, alongside the main editor block.
 
 *   👉 **Public Web Engine (Generator Only)**
-    **URL:** [https://ais-pre-5ouxyd7t4f2gjq6jnnw6e4-432099260399.asia-northeast1.run.app/](https://ais-pre-5ouxyd7t4f2gjq6jnnw6e4-432099260399.asia-northeast1.run.app/)
+    **[Open Public Web Engine](https://ais-pre-5ouxyd7t4f2gjq6jnnw6e4-432099260399.asia-northeast1.run.app/)**
     *(Share this link with users! They can use the AI prompt generator without modifying any app settings or code.)*
 
 *   👉 **Editor View (Admin/Dev)**
-    **URL:** [https://ais-pre-5ouxyd7t4f2gjq6jnnw6e4-432099260399.asia-northeast1.run.app/#/editor](https://ais-pre-5ouxyd7t4f2gjq6jnnw6e4-432099260399.asia-northeast1.run.app/#/editor)
+    **[Open Editor View](https://ais-pre-5ouxyd7t4f2gjq6jnnw6e4-432099260399.asia-northeast1.run.app/#/editor)**
 
 ---
 
