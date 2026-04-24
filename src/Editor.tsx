@@ -197,10 +197,10 @@ export default function Editor() {
                   key={g}
                   onClick={() => setSelectedGender(g)}
                   className={cn(
-                    "py-5 rounded-2xl border-2 text-xs uppercase tracking-widest font-black transition-all",
+                    "py-5 rounded-2xl border-2 text-sm uppercase tracking-widest font-black transition-all",
                     selectedGender === g 
                       ? "bg-orange-500 text-white border-orange-500 shadow-lg" 
-                      : "bg-white/5 text-white/30 border-white/10 hover:border-white/30"
+                      : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                   )}
                 >
                   {g === 'female' ? '♀ 여성(FEMALE)' : '♂ 남성(MALE)'}
@@ -220,10 +220,10 @@ export default function Editor() {
                   key={age}
                   onClick={() => setSelectedAge(age)}
                   className={cn(
-                    "py-4 rounded-xl border text-[10px] font-bold transition-all",
+                    "py-4 rounded-xl border text-xs font-bold transition-all",
                     selectedAge === age 
                       ? "bg-orange-500 text-white border-orange-500 shadow-md" 
-                      : "bg-white/5 text-white/30 border-white/10 hover:border-white/20"
+                      : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                   )}
                 >
                   {age}
@@ -246,11 +246,11 @@ export default function Editor() {
                     "py-2 rounded-lg border transition-all flex flex-col items-center justify-center min-h-[54px]",
                     selectedGanji === gj 
                       ? "bg-orange-500 text-white border-orange-500 font-bold z-10 scale-105 shadow-xl" 
-                      : "bg-white/5 text-white/20 border-white/10 hover:border-white/20 hover:text-white/50"
+                      : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                   )}
                 >
-                  <span className="font-serif text-[12px] leading-none mb-1">{gj}</span>
-                  <span className="text-[8px] opacity-60">({getGanjiHangul(gj)})</span>
+                  <span className="font-serif text-[14px] leading-none mb-1">{gj}</span>
+                  <span className="text-[10px] opacity-80">({getGanjiHangul(gj)})</span>
                 </button>
               ))}
             </div>
@@ -270,11 +270,11 @@ export default function Editor() {
                     "flex flex-col items-center justify-center min-h-[58px] p-2 rounded-lg border transition-all",
                     selectedMonth === m.hanja
                       ? "bg-orange-500 text-white border-orange-500 shadow-md"
-                      : "bg-white/5 border-white/10 text-white/30 hover:border-white/30"
+                      : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                   )}
                 >
-                  <span className="text-[11px] font-bold">{m.hanja}</span>
-                  <span className="text-[8px] opacity-50">{m.label}</span>
+                  <span className="text-[13px] font-bold">{m.hanja}</span>
+                  <span className="text-[10px] opacity-80">{m.label}</span>
                 </button>
               ))}
             </div>
@@ -298,10 +298,10 @@ export default function Editor() {
                     "w-full h-full min-h-[75px] p-2 rounded-lg border transition-all flex flex-col items-center justify-center text-center",
                     selectedJob === "제외" 
                       ? "bg-stone-500 text-white border-stone-500 shadow-md" 
-                      : "bg-white/5 text-white/30 border-white/10 hover:border-white/30"
+                      : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                   )}
                 >
-                  <span className="text-[10px] font-bold leading-tight break-keep">비주얼 설정<br/>제외</span>
+                  <span className="text-xs font-bold leading-tight break-keep">비주얼 설정<br/>제외</span>
                 </button>
               </div>
 
@@ -317,10 +317,10 @@ export default function Editor() {
                         "w-full h-full min-h-[75px] p-2 rounded-lg border transition-all flex flex-col items-center justify-center text-center gap-1 relative",
                         isSelected 
                           ? "bg-orange-500 text-white border-orange-500 shadow-md" 
-                          : "bg-white/5 text-white/30 border-white/10 hover:border-white/30"
+                          : "bg-white/5 text-white border-white/10 hover:bg-white/10 hover:border-white/30"
                       )}
                     >
-                      <div className="text-[10px] font-bold leading-tight flex flex-col items-center justify-center gap-0.5">
+                      <div className="text-xs font-bold leading-tight flex flex-col items-center justify-center gap-0.5">
                         {(() => {
                           const parts = group.name.split('·');
                           if (parts.length <= 1) {
@@ -477,8 +477,8 @@ export default function Editor() {
                 <button 
                   onClick={() => setPromptLang('ko')}
                   className={cn(
-                    "px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                    promptLang === 'ko' ? "bg-orange-500 text-white shadow-lg" : "text-white/30 hover:text-white/60"
+                    "px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
+                    promptLang === 'ko' ? "bg-orange-500 text-white shadow-lg" : "text-white hover:bg-white/10"
                   )}
                 >
                   Korean ver.
@@ -486,8 +486,8 @@ export default function Editor() {
                 <button 
                   onClick={() => handleLangSwitch('en')}
                   className={cn(
-                    "px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                    promptLang === 'en' ? "bg-orange-500 text-white shadow-lg" : "text-white/30 hover:text-white/60"
+                    "px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
+                    promptLang === 'en' ? "bg-orange-500 text-white shadow-lg" : "text-white hover:bg-white/10"
                   )}
                 >
                   {isTranslating ? 'Translating...' : 'English ver.'}

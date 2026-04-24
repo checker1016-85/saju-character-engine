@@ -108,7 +108,7 @@ export default function Generator() {
           </div>
           <button 
             onClick={() => window.location.hash = '#/editor'}
-            className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold text-white/30 hover:text-orange-400 transition-colors"
+            className="flex items-center gap-2 text-xs uppercase tracking-widest font-bold text-white hover:text-orange-400 transition-colors bg-white/5 px-4 py-2 rounded-lg hover:bg-white/10"
           >
             Go to Editor <ExternalLink className="w-3 h-3" />
           </button>
@@ -179,8 +179,8 @@ export default function Generator() {
             <button 
               onClick={() => setPromptLang('ko')}
               className={cn(
-                "flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all rounded-xl",
-                promptLang === 'ko' ? "bg-orange-500 text-white shadow-lg" : "text-white/30 hover:text-white/60"
+                "flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all rounded-xl",
+                promptLang === 'ko' ? "bg-orange-500 text-white shadow-lg" : "text-white bg-white/5 hover:bg-white/10"
               )}
             >
               Korean ver.
@@ -188,8 +188,8 @@ export default function Generator() {
             <button 
               onClick={() => handleLangSwitch('en')}
               className={cn(
-                "flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-all rounded-xl ml-2",
-                promptLang === 'en' ? "bg-orange-500 text-white shadow-lg" : "text-white/30 hover:text-white/60"
+                "flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all rounded-xl ml-2",
+                promptLang === 'en' ? "bg-orange-500 text-white shadow-lg" : "text-white bg-white/5 hover:bg-white/10"
               )}
             >
               {isTranslating ? 'Translating...' : 'English ver.'}
